@@ -1,25 +1,28 @@
-# TikTok Live to Firebase 24/7 Cloud Bridge
+# TikTok Live to Firebase 24/7 Cloud Bridge (Flask Web Service Edition)
+import os
+import threading
 import time
 import requests
+from flask import Flask
 from TikTokLive import TikTokLiveClient
 from TikTokLive.types.events import GiftEvent, CommentEvent
 
+app = Flask(__name__)
 FIREBASE_URL = "https://hexlak-default-rtdb.firebaseio.com/"
 
-print("=== HEXOL CLOUD 24/7 BRIDGE STARTED ===")
+@app.route('/')
+def home():
+    return "Hexol TikTok Bridge is running 24/7!"
 
-def get_active_streamer():
-    try:
-        res = requests.get(f"{FIREBASE_URL}/active_streamer.json")
-        return res.json()
-    except Exception as e:
-        print("Yayıncı alınamadı:", e)
-        return None
-
-if __name__ == '__main__':
+def run_tiktok_bot():
     current_streamer = None
     while True:
-        streamer = get_active_streamer()
+        try:
+            res = requests.get(f"{FIREBASE_URL}/active_streamer.json")
+            streamer = res.json()
+        except:
+            streamer = None
+
         if streamer and streamer != current_streamer:
             current_streamer = streamer
             print(f"🔄 Yeni aktif yayıncıya bağlanılıyor: @{current_streamer}")
@@ -61,3 +64,11 @@ if __name__ == '__main__':
                 current_streamer = None
         
         time.sleep(10)
+
+if __name__ == '__main__':
+    t = threading.Thread(target=run_tiktok_bot)
+    t.daemon = True
+    t.start()
+
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port)
